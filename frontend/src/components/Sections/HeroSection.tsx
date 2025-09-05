@@ -2,11 +2,16 @@ import type { FC } from "react";
 
 const HeroSection: FC = () => {
   return (
-    <section className='w-full justify-center py-48 bg-linear-to-l from-white to-primary'>
+    <section className='w-full justify-center py-48 bg-white'>
       <div className='flex justify-evenly p-16'>
-        <div className='max-w-4xl opacity-50 font-roboto'>
+        <div className='max-w-4xl font-roboto '>
           <div className='text-background text-7xl font-bold pb-10'>
-            Letting Books be Heard
+            <div>
+              Let Your Book Be{" "}
+              <a className='text-transparent bg-clip-text bg-linear-to-r from-purple-400 via-cyan-500 to-primary'>
+                Heard
+              </a>
+            </div>
           </div>
           <div className='text-background text-3xl font-semibold'>
             We mix AI voice models, premium sounds and beautiful music together

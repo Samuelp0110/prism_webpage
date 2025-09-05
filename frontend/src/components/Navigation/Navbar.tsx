@@ -1,24 +1,50 @@
-"use client"; // Safe to ignore in a Vite + React SPA, usually a Next.js directive
+"use client";
 
 import { useEffect, useState } from "react";
-import { Link } from "react-router"; // React Router v7
+import { Link } from "react-router";
 import { Menu, X } from "lucide-react";
 import Button from "../ui/Button";
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false); // Tracks mobile menu toggle
+  const [isOpen, setIsOpen] = useState(false);
+  const [showNavbar, setShowNavbar] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "auto";
   }, [isOpen]);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      // If scrolling down, hide the navbar
+      if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setShowNavbar(false);
+      } else {
+        setShowNavbar(true);
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
   return (
-    <nav className='w-full px-6 py-4 bg-base border-b-2 border-secondary'>
-      <div className='px-40 mx-auto flex items-center justify-between'>
+    <nav
+      className={`transition-transform duration-300 ease-in-out 
+        ${showNavbar ? "translate-y-0" : "-translate-y-full"} 
+        sticky top-0 z-50 
+        bg-white shadow-lg ring-1 ring-primary/5
+        px-6 py-3`}
+    >
+      <div className='sm:px-16 md:px-16 lg:px-40 mx-auto flex items-center justify-between'>
         {/* Logo that links to homepage */}
         <Link
           to='/'
-          className='text-[32px] md:text-[44px] font-bold font-roboto text-secondary'
+          className='text-2xl font-bold font-roboto '
         >
           Hartibu Labs
         </Link>
@@ -29,18 +55,22 @@ export default function Navbar() {
             {/* Use Link instead of anchor for SPA routing */}
             <Link
               to=''
-              className='text-[20px] md:text-[24px] px-2 font-roboto text-secondary hover:bg-primary'
+              className='text-xl font-roboto transition-colors duration-100 ease-in hover:text-primary'
             >
               About Us
             </Link>
             <Link
               to=''
-              className='text-[20px] md:text-[24px] px-2 font-roboto text-secondary'
+              className='text-xl font-roboto transition-colors duration-100 ease-in hover:text-primary'
             >
               Demo
             </Link>
           </div>
-          <Button>Contact Us</Button>
+          <Link to=''>
+            <Button className='text-xl transition-colors ease-in'>
+              Contact Us
+            </Button>
+          </Link>
         </div>
 
         {/* Mobile Toggle Button (hamburger icon) */}
@@ -48,7 +78,7 @@ export default function Navbar() {
           <button
             onClick={() => setIsOpen(!isOpen)}
             aria-label='Toggle Menu'
-            className='text-body border-2 border-body rounded px-1 py-1 text-2xl'
+            className='text-body rounded px-1 py-1 text-2xl'
           >
             {isOpen ? <X color='#0C0B22' /> : <Menu color='#0C0B22' />}
           </button>
@@ -63,17 +93,17 @@ export default function Navbar() {
       >
         <Link
           to='/about'
-          className='text-[20px] font-cormorant text-background'
+          className='text-[20px] font-cormorant'
           onClick={() => setIsOpen(false)}
         >
-          About Me
+          About Us
         </Link>
         <Link
           to='/projects'
-          className='text-[20px] font-cormorant text-primary'
+          className='text-[20px] font-cormorant '
           onClick={() => setIsOpen(false)}
         >
-          Projects
+          Demo
         </Link>
       </div>
     </nav>
