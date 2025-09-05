@@ -5,7 +5,7 @@ import ChillGuy from "../../assets/people/cSuite/Chill Guy.png";
 
 const PeopleIntro: FC = () => {
   return (
-    <section className='w-full min-h-screen bg-base py-24'>
+    <section className='w-full bg-base py-24'>
       <div className='flex flex-col items-center mb-8 text-5xl font-roboto text-secondary font-bold'>
         Meet The Founders
       </div>

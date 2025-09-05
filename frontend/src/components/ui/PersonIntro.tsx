@@ -19,7 +19,7 @@ const PersonIntro: FC<PersonIntroProps> = ({
   role,
 }) => {
   return (
-    <div className='flex flex-col items-center'>
+    <div className='flex flex-col items-center p-12'>
       <div className='py-t-4 font-roboto font-semibold sm:text-xl md:text-2xl lg:text-3xl text-secondary '>
         {name}
       </div>

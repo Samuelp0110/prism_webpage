@@ -2,7 +2,7 @@ import type { FC } from "react";
 
 const HeroSection: FC = () => {
   return (
-    <section className='w-full justify-center py-48 bg-linear-to-l from-white to-secondary'>
+    <section className='w-full justify-center py-48 bg-linear-to-l from-white to-primary'>
       <div className='flex justify-evenly p-16'>
         <div className='max-w-4xl opacity-50 font-roboto'>
           <div className='text-background text-7xl font-bold pb-10'>
