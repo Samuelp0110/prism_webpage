@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router"; // React Router v7
 import { Menu, X } from "lucide-react";
-import Button from "../Core/Button";
+import Button from "../ui/Button";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false); // Tracks mobile menu toggle

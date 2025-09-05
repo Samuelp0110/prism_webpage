@@ -1,7 +1,7 @@
 import type { FC } from "react";
-import PersonIntro from "./PersonIntro";
-import Eoin from "../assets/people/cSuite/Eoin.jpg";
-import ChillGuy from "../assets/people/cSuite/Chill Guy.png";
+import PersonIntro from "../ui/PersonIntro";
+import Eoin from "../../assets/people/cSuite/Eoin.jpg";
+import ChillGuy from "../../assets/people/cSuite/Chill Guy.png";
 
 const PeopleIntro: FC = () => {
   return (

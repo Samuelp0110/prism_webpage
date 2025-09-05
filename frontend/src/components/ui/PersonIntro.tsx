@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import NoImage from "../../public/NoImage.svg";
+import NoImage from "../../../public/NoImage.svg";
 
 interface PersonIntroProps {
   name: string;
