@@ -11,6 +11,7 @@ const HeroSection: FC = () => {
         <WebGLCanvas />
       </Suspense>
       {/* 🧾 Foreground content */}
+
       <div className='relative z-10 flex justify-evenly p-16'>
         <div className='max-w-4xl font-roboto'>
           <div className='text-background text-7xl font-bold pb-10'>
@@ -20,13 +21,9 @@ const HeroSection: FC = () => {
             </a>
           </div>
           <div className='text-background text-3xl font-semibold'>
-            We mix AI voice models, premium sounds and beautiful music together
-            to make sure your book isn't just told, it's heard
+            We take your novel and give you an Audiobook with Voice Acting
+            powered by AI, beautiful music, and perfectly placed sounds
           </div>
-        </div>
-
-        <div className='bg-black opacity-50 p-16 text-background font-roboto'>
-          Hello
         </div>
       </div>
     </section>

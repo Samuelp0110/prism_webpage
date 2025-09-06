@@ -49,7 +49,7 @@ const WorkflowNode: FC<WorkflowNodeProps> = ({
           className='
           data-[side=bottom]:animate-slide-up-and-fade data-[side=top]:animate-slide-down-and-fade
           data-[side=left]:animate-slide-right-and-fade data-[side=right]:animate-slide-left-and-fade 
-          p-4 font-roboto bg-secondary/10 shadow-lg ring-1 ring-primary/5 backdrop-blur-lg rounded-2xl text-secondary'
+          max-w-sm inline-block text-center p-4 font-roboto bg-secondary/10 shadow-lg ring-1 ring-primary/5 backdrop-blur-lg rounded-2xl text-secondary'
         >
           {hoverCardContent}
           <HoverCard.Arrow className='fill-secondary/10 shadow-lg ring-1 ring-primary/5' />

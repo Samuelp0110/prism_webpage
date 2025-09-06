@@ -14,6 +14,11 @@ const WaveShaderMaterial = shaderMaterial(
     uDriftAmount: 0,
     uDriftStart: 0.66, // <-- start drifting at ~2/3 across
     uDriftRamp: 0.08, // <-- how softly to ramp in (try 0.05..0.15)
+    uSaturation: 1.35, // >1 more colorful
+    uAlpha: 0.8, // overall opacity (for additive punch)
+    uCoreWidth: 0.095, // width of the white hot core (smaller = crisper)
+    uCoreIntensity: 0.7, // strength of the white core
+    uEdgeSoftness: 0.06, // tiny edge blur (smaller = crisper edge)
   },
   /* vertex shader */ `
   varying vec2 vUv;
@@ -27,7 +32,7 @@ const WaveShaderMaterial = shaderMaterial(
     vUv = uv;
     vec3 pos = position;
 
-    float wave1 = sin(pos.x * 3.0 + uTime * 0.4) * 0.2;
+    float wave1 = sin(pos.x * 3.0 + uTime * 0.4) * 0.05;
     float wave2 = cos(pos.x * 1.9 - uTime * 0.6) * 0.1;
     float combinedWave = mix(wave1, wave2, 0.5);
 
@@ -47,50 +52,69 @@ const WaveShaderMaterial = shaderMaterial(
   }
   `,
   /* fragment shader (unchanged) */ `
-  varying vec2 vUv;
-  uniform float uTime;
-  uniform vec3 uColorPrimary;
-  uniform vec3 uColorSecondary;
+varying vec2 vUv;
+uniform float uTime;
+uniform vec3 uColorPrimary;
+uniform vec3 uColorSecondary;
 
-  // Subtle variation of core width along X so it doesn't look uniform
-  float bandVary(float x, float t) {
-    return 0.20 + 0.10 * sin(x * 5.0 + t * 0.25);
-  }
+uniform float uSaturation;    // >1 = more color
+uniform float uAlpha;         // overall opacity
+uniform float uCoreWidth;     // ~0.03..0.06
+uniform float uCoreIntensity; // ~0.6..1.2
+uniform float uEdgeSoftness;  // ~0.03..0.08
 
-  void main() {
-    float centerDist = abs(vUv.y - 0.5) * 2.0;
+// Same subtle width variation along X
+float bandVary(float x, float t) {
+  return 0.10 + 0.05 * sin(x * 7.0 + t * 0.25);
+}
 
-    float coreWidth = bandVary(vUv.x, uTime);
-    float coreMix   = 1.0 - smoothstep(0.0, coreWidth, centerDist);
-    vec3 coreColor  = mix(vec3(1.0), uColorPrimary, 0.60);
+// Simple saturation in linear space
+vec3 saturateColor(vec3 c, float s) {
+  float l = dot(c, vec3(0.299, 0.587, 0.114));
+  return mix(vec3(l), c, s);
+}
 
-    float midThickness = 0.20;
-    float midStart  = coreWidth;
-    float midEnd    = coreWidth + midThickness;
-    float midMix    = smoothstep(midStart, midEnd, centerDist);
-    vec3 midColor   = uColorPrimary;
+void main() {
+  float centerDist = abs(vUv.y - 0.5) * 2.0;
 
-    float edgeStart = midEnd;
-    float edgeEnd   = 0.52;
-    float edgeMix   = smoothstep(edgeStart, edgeEnd, centerDist);
-    float edgeWhiteStrength = 0.45;
-    vec3 edgeColor  = mix(midColor, vec3(1.0), edgeMix * edgeWhiteStrength);
+  // Base colored band (keep it mostly the ribbon color)
+  float coreWidth = bandVary(vUv.x, uTime);
+  float midThickness = 0.18;                  // colored middle thickness
+  float tMid = smoothstep(coreWidth, coreWidth + midThickness, centerDist);
+  vec3 bandColor = mix(vec3(1.0), uColorPrimary, 0.90); // almost pure color
 
-    vec3 color = coreColor;
-    color = mix(color, midColor, clamp(midMix, 0.0, 1.0));
-    color = mix(color, edgeColor, clamp(edgeMix, 0.0, 1.0));
+  // Slight edge whitening (very subtle)
+  float tEdge = smoothstep(coreWidth + midThickness,
+                           coreWidth + midThickness + uEdgeSoftness,
+                           centerDist);
+  bandColor = mix(bandColor, vec3(1.0), tEdge * 0.12);  // tiny white at edge
 
-    color += 0.02 * sin((vUv.x + uTime * 0.15) * 6.2831);
+  // Add a narrow white "hot core" using a Gaussian profile (crisp, ~10% blur)
+  float core = exp(-pow(centerDist / max(1e-4, uCoreWidth), 2.0)); // 0..1
+  vec3 highlight = vec3(1.0) * (core * uCoreIntensity);
 
-    float alphaBand =
-        smoothstep(0.14, 0.42, vUv.y) *
-        smoothstep(0.86, 0.58, vUv.y);
+  // Avoid subtracting light (only add shimmer)
+  float shimmer = max(0.0, sin((vUv.x + uTime * 0.15) * 6.2831));
+  bandColor += 0.02 * shimmer;
 
-    float alphaProfile = mix(0.55, 0.80, smoothstep(coreWidth * 0.6, edgeEnd, centerDist));
-    float alpha = alphaProfile * alphaBand;
+  // Saturation & gentle brightness
+  bandColor = saturateColor(bandColor, uSaturation) * 1.03;
 
-    gl_FragColor = vec4(color, alpha);
-  }
+  // Vertical envelope (kept tight to avoid blur feel)
+  float alphaBand =
+      smoothstep(0.18, 0.40, vUv.y) *
+      smoothstep(0.82, 0.60, vUv.y);
+
+  // Base alpha (colored band), plus extra alpha for the hot core
+  float alphaBase = mix(0.65, 0.90, tMid);
+  float alpha = uAlpha * alphaBase * alphaBand + (core * uCoreIntensity * 0.65);
+
+  // Output for additive blending
+  vec3 color = bandColor + highlight;
+  gl_FragColor = vec4(color, clamp(alpha, 0.0, 1.0));
+}
+
+
   `
 );
 
@@ -130,12 +154,39 @@ const ShaderPlane = ({
   });
 
   useMemo(() => {
-    material.uniforms.uColorPrimary.value = new THREE.Color(primary);
-    material.uniforms.uColorSecondary.value = new THREE.Color(secondary);
+    material.uniforms.uColorPrimary.value.copy(
+      new THREE.Color(primary).convertSRGBToLinear()
+    );
+    material.uniforms.uColorSecondary.value.copy(
+      new THREE.Color(secondary).convertSRGBToLinear()
+    );
     material.uniforms.uDriftAmount.value = drift;
     material.uniforms.uDriftStart.value = driftStart;
     material.uniforms.uDriftRamp.value = driftRamp;
-  }, [primary, secondary, drift, driftStart, driftRamp]);
+
+    // optional: tweak these if you like
+    material.uniforms.uSaturation.value = 1.35;
+    material.uniforms.uAlpha.value = 0.9;
+    material.uniforms.uCoreWidth.value = 0.095; // narrower → crisper white line
+    material.uniforms.uCoreIntensity.value = 0.9; // stronger white in core
+    material.uniforms.uEdgeSoftness.value = 0.9; // smaller → crisper edges
+  }, [
+    material.uniforms.uColorPrimary,
+    material.uniforms.uColorSecondary,
+    material.uniforms.uDriftAmount,
+    material.uniforms.uDriftStart,
+    material.uniforms.uDriftRamp,
+    material.uniforms.uSaturation,
+    material.uniforms.uAlpha,
+    material.uniforms.uCoreWidth,
+    material.uniforms.uCoreIntensity,
+    material.uniforms.uEdgeSoftness,
+    primary,
+    secondary,
+    drift,
+    driftStart,
+    driftRamp,
+  ]);
 
   return (
     <mesh
@@ -169,18 +220,18 @@ const WebGLCanvas = () => {
         pointerEvents: "none",
       }}
     >
-      {/* Blue (front) — starts drifting at 70% across, soft ramp */}
+      {/* Blue (front) */}
       <ShaderPlane
         primary='#98ccc6'
-        secondary='#394368'
+        secondary='#ffffff'
         z={-2}
         offset={0}
         drift={0.0}
-        driftStart={0.7}
+        driftStart={1}
         driftRamp={0.1}
       />
 
-      {/* Yellow (middle) — same start, stronger upward drift */}
+      {/* Yellow (middle) */}
       <ShaderPlane
         primary='#FEE440'
         secondary='#FFA500'
@@ -191,7 +242,7 @@ const WebGLCanvas = () => {
         driftRamp={0.8}
       />
 
-      {/* Red (back) — same start, strong downward drift */}
+      {/* Red (back) */}
       <ShaderPlane
         primary='#EF476F'
         secondary='#8B1E3F'

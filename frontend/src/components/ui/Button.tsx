@@ -20,7 +20,7 @@ const Button = ({
     <button
       type={type}
       onClick={onClick}
-      className={`inline-flex items-center justify-center px-4 py-2 rounded-lg text-secondary bg-primary transition-colors duration-100 hover:bg-secondaryTwo hover:text-black font-roboto text-2xl font-semibold ${className}`}
+      className={`inline-flex items-center justify-center px-4 py-2 rounded-lg text-white bg-secondary transition-colors duration-100 hover:bg-secondaryTwo font-roboto text-2xl font-semibold ${className}`}
     >
       {children}
     </button>

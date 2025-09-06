@@ -7,11 +7,8 @@ const Workflow: FC = () => {
   return (
     <section
       id='workflow-scope'
-      className='relative flex flex-col items-center justify-center isolate w-full bg-linear-to-r from-white to-primary pt-12 pb-24'
+      className='relative flex flex-col items-center justify-center isolate w-full bg-linear-to-r from-white to-primary/20 py-24'
     >
-      <div className='font-roboto font-bold text-secondary text-4xl'>
-        Our Workflow
-      </div>
       <div className='w-full flex flex-wrap items-center justify-evenly'>
         {/* your nodes */}
         <WorkflowNode
@@ -23,7 +20,8 @@ const Workflow: FC = () => {
         <WorkflowNode
           id='wf-2'
           headline='We Break It Down'
-          hoverCardContent='We break it down into smaller, bite-size pieces like chapters, sentences, and even plain old words'
+          hoverCardContent='We break it down into smaller, bite-size pieces like 
+          chapters, sentences, and even plain old words'
         />
         <WorkflowNode
           id='wf-3'
