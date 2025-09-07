@@ -22,6 +22,14 @@ type IcoProps = {
   audioRef?: RefObject<HTMLAudioElement | null>;
 };
 
+type IcoUniforms = {
+  u_time: THREE.IUniform<number>;
+  u_color: THREE.IUniform<THREE.Color>;
+  u_resolution: THREE.IUniform<THREE.Vector2>;
+  u_audio: THREE.IUniform<number>; // 0..1 envelope
+  u_frequency: THREE.IUniform<number>; // 0..255 mirror (optional)
+};
+
 const vert = `uniform float u_time;
 uniform float u_audio;
 uniform float u_frequency;
@@ -90,18 +98,50 @@ float pnoise(vec3 P, vec3 rep) {
 }
 
 void main() {
-  float noise = 5.0 * pnoise(position + vec3(u_time * 0.8), vec3(10.0));
-  float n = 0.35 * (0.3 + 0.7 * abs(noise)); // 0.105..0.35
+  // ---- Tunables ----
+  const float NOISE_FREQ   = 0.55;  // lower = broader hills
+  const float NOISE_SPEED  = 0.30;  // how fast noise evolves over time
+  const float NOISE_GAIN   = 0.9;  // scales the noise contribution overall
+  const float BASE_GAIN    = 0.5;  // subtle idle size (no breathing)
+  // -------------------
 
-  float f = clamp(u_frequency, 0.0, 255.0);
-  float k = pow(f / 255.0, 1.3) * 1.2; // punchy
-  float base = 0.20;
+  // Continuous, time-driven noise (no sine "breathing")
+  float n = pnoise(position * NOISE_FREQ + vec3(u_time * NOISE_SPEED), vec3(10.0));
 
-  float displacement = (base + k) * n;
-  vec3 newPosition = position + normal * displacement;
+  // Map [-1,1] -> [0,1]
+  float n01 = 0.5 + 0.5 * n;
+
+  // Audio level comes in as 0..1 (we'll set it in JS via an envelope)
+  // If you're still passing 0..255, just do: float level = clamp(u_frequency/255.0, 0.0, 1.0);
+  float level = clamp(u_audio, 0.0, 1.0);
+
+  // Make peaks sharper as audio rises:
+  // exponent < 1 => steeper peaks, > 1 => softer.
+  float exponent = mix(1.6, 0.55, level);  // quiet -> soft; loud -> sharp
+  float nShaped  = pow(n01, exponent);
+
+  // Size grows with audio (but stays continuous)
+  float gain = BASE_GAIN + NOISE_GAIN * mix(0.0, 1.25, level);
+
+  float displacement = gain * nShaped;
+  vec3 newPosition   = position + normal * displacement;
+
   gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
 }
+
+
 `;
+
+// float noise = 5.0 * pnoise(position + vec3(u_time * 0.8), vec3(10.0));
+// float n = 0.35 * (0.3 + 0.7 * abs(noise)); // 0.105..0.35
+
+// float f = clamp(u_frequency, 0.0, 255.0);
+// float k = pow(f / 255.0, 1.3) * 1.2; // punchy
+// float base = 0.20;
+
+// float displacement = (base + k) * n;
+// vec3 newPosition = position + normal * displacement;
+// gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
 
 // DEBUG fragment: grayscale by frequency
 const frag = `precision highp float;
@@ -297,23 +337,28 @@ const Icosahedron: FC<IcoProps> = ({
     const analyser = analyserRef.current!;
     const data = new Uint8Array(analyser.frequencyBinCount);
 
-    let smoothed = 0;
-    const alpha = 0.35;
+    let env = 0; // 0..1 smoothed envelope
+    const ATTACK = 0.25; // rise speed
+    const DECAY = 0.06; // fall speed
 
     const tick = () => {
       analyser.getByteFrequencyData(data);
-      const sum = data.reduce((a, v) => a + v, 0);
-      const avg255 = data.length ? sum / data.length : 0; // 0..255
-      smoothed = smoothed * (1 - alpha) + avg255 * alpha;
 
-      // fallback sine to prove the pipeline even if analyser is silent
-      const test =
-        smoothed > 1
-          ? smoothed
-          : (Math.sin(performance.now() * 0.003) * 0.5 + 0.5) * 255;
+      // bass-weighted level (0..1). Use full average if you prefer.
+      const N = Math.min(12, data.length);
+      const bass = N
+        ? data.slice(0, N).reduce((a, v) => a + v, 0) / (N * 255)
+        : 0;
 
-      if (materialRef.current?.uniforms?.u_frequency) {
-        materialRef.current.uniforms.u_frequency.value = test;
+      const target = Math.min(1, Math.max(0, bass));
+      const rate = target > env ? ATTACK : DECAY;
+      env += (target - env) * rate;
+
+      // Typed uniforms (no any)
+      const u = materialRef.current?.uniforms as IcoUniforms | undefined;
+      if (u) {
+        u.u_audio.value = env; // drive 0..1 for shader
+        u.u_frequency.value = env * 255; // optional: keep your 0..255 too
       }
 
       rafRef.current = requestAnimationFrame(tick);
