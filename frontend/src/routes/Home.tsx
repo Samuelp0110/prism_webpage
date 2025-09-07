@@ -17,6 +17,7 @@ const Home: FC = () => {
       </div>
       <Workflow />
       <Demo />
+
       <PeopleIntro />
     </main>
   );
