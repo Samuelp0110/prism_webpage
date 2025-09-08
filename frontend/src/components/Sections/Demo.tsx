@@ -6,14 +6,33 @@ import PlayAudioFile from "../ui/PlayAudioFile";
 import { AudioReactiveRibbon } from "../three/AudioReactiveRibbon";
 import { Suspense } from "react";
 import { DepthOfField, EffectComposer } from "@react-three/postprocessing";
+import type { ColorRepresentation } from "three";
 
-const audioBooks = [
+type Palette = {
+  primary: ColorRepresentation;
+  secondary: ColorRepresentation;
+  tertiary: ColorRepresentation;
+};
+
+const audioBooks: Array<{
+  title: string;
+  src: string;
+  text: string;
+  genre: string;
+  author: string;
+  colors: Palette;
+}> = [
   {
     title: "Mistborn",
     src: audio1,
     text: "It amazes me how many nations have united behind our purpose. There are still dissenters, of course—and some kingdoms, regrettably, have fallen to wars that I could not stop. Still, this general unity is glorious, even humbling, to contemplate. I wish that the nations of mankind hadn’t required such a dire threat to make them see the value of peace and cooperation.",
     genre: "High Fantasy",
     author: "Brandon Sanderson",
+    colors: {
+      primary: "#d38dd8", // center
+      secondary: "#98ccc6", // between
+      tertiary: "#7baeff", // edges
+    },
   },
 ];
 
@@ -41,6 +60,8 @@ const Demo: FC = () => {
                 width={30}
                 height={1.5}
                 segments={150}
+                colors={selectedAudio.colors} // ✅ pass down
+                opacity={0.42}
               />
             </Suspense>
           </Canvas>
