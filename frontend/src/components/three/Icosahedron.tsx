@@ -28,11 +28,16 @@ type IcoUniforms = {
   u_resolution: THREE.IUniform<THREE.Vector2>;
   u_audio: THREE.IUniform<number>; // 0..1 envelope
   u_frequency: THREE.IUniform<number>; // 0..255 mirror (optional)
+  u_peak: THREE.IUniform<number>;
 };
 
-const vert = `uniform float u_time;
-uniform float u_audio;
-uniform float u_frequency;
+const vert = `
+uniform float u_time;
+uniform float u_audio;      // 0..1 envelope
+uniform float u_frequency;  // optional 0..255 mirror
+uniform float u_peak;       // 0..1 transient impulse (for bounce)
+
+varying vec3 vNormal;
 
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -99,59 +104,67 @@ float pnoise(vec3 P, vec3 rep) {
 
 void main() {
   // ---- Tunables ----
-  const float NOISE_FREQ   = 0.55;  // lower = broader hills
-  const float NOISE_SPEED  = 0.30;  // how fast noise evolves over time
-  const float NOISE_GAIN   = 0.9;  // scales the noise contribution overall
-  const float BASE_GAIN    = 0.5;  // subtle idle size (no breathing)
+  const float NOISE_FREQ   = 0.85;
+  const float NOISE_SPEED  = 0.18;
+  const float NOISE_GAIN   = 0.98;
+  const float BASE_GAIN    = 0.16;
+
+  // Bounce feel
+  const float PEAK_FREQ    = 50.0;  // Hz-ish feel of the bounce wobble
+  const float PEAK_AMP     = 0.90; // how much bounce scales displacement
   // -------------------
 
-  // Continuous, time-driven noise (no sine "breathing")
+  // Continuous evolving noise (no breathing)
   float n = pnoise(position * NOISE_FREQ + vec3(u_time * NOISE_SPEED), vec3(10.0));
-
-  // Map [-1,1] -> [0,1]
   float n01 = 0.5 + 0.5 * n;
 
-  // Audio level comes in as 0..1 (we'll set it in JS via an envelope)
-  // If you're still passing 0..255, just do: float level = clamp(u_frequency/255.0, 0.0, 1.0);
-  float level = clamp(u_audio, 0.0, 1.0);
-
-  // Make peaks sharper as audio rises:
-  // exponent < 1 => steeper peaks, > 1 => softer.
-  float exponent = mix(1.6, 0.55, level);  // quiet -> soft; loud -> sharp
+  // Sharpen peaks with audio level (0..1)
+  float exponent = mix(1.6, 0.55, clamp(u_audio, 0.0, 1.0));  // quiet->soft, loud->sharp
   float nShaped  = pow(n01, exponent);
 
-  // Size grows with audio (but stays continuous)
-  float gain = BASE_GAIN + NOISE_GAIN * mix(0.0, 1.25, level);
+  // Base size grows with audio
+  float gain = BASE_GAIN + NOISE_GAIN * mix(0.0, 1.25, clamp(u_audio, 0.0, 1.0));
 
-  float displacement = gain * nShaped;
-  vec3 newPosition   = position + normal * displacement;
+  // 🔔 Bounce: a small oscillation whose amplitude follows u_peak (decays in JS),
+  // multiplied into displacement so it “rings” around peaks
+  float bounce = 1.0 + PEAK_AMP * u_peak * sin(u_time * PEAK_FREQ * 6.28318);
 
+  float displacement = gain * nShaped * bounce;
+
+  // (lighting)
+  vNormal = normalize(normalMatrix * normal);
+
+  vec3 newPosition = position + normal * displacement;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
 }
-
-
 `;
 
-// float noise = 5.0 * pnoise(position + vec3(u_time * 0.8), vec3(10.0));
-// float n = 0.35 * (0.3 + 0.7 * abs(noise)); // 0.105..0.35
+const frag = `
+precision highp float;
 
-// float f = clamp(u_frequency, 0.0, 255.0);
-// float k = pow(f / 255.0, 1.3) * 1.2; // punchy
-// float base = 0.20;
-
-// float displacement = (base + k) * n;
-// vec3 newPosition = position + normal * displacement;
-// gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
-
-// DEBUG fragment: grayscale by frequency
-const frag = `precision highp float;
-uniform float u_frequency;
 uniform vec3 u_color;
+uniform vec3 u_lightDir;     // view-space light direction
+uniform vec3 u_lightColor;   // usually white
+uniform vec3 u_shadowColor;  // your tinted “dark side”
+uniform float u_ambient;     // 0..1 ambient amount
+
+varying vec3 vNormal;
 
 void main() {
-  float t = clamp(u_frequency / 255.0, 0.0, 1.0);
-  gl_FragColor = vec4(u_color, 1.0);
+  vec3 N = normalize(vNormal);
+  vec3 L = normalize(u_lightDir);
+
+  float lambert = max(dot(N, L), 0.0);
+
+  // shadow base is a tint between shadow color and base color, weighted by ambient
+  vec3 shadow = mix(u_shadowColor, u_color, clamp(u_ambient, 0.0, 1.0));
+
+  // blend from shadow → lit color by lambert
+  vec3 lit = mix(shadow, u_color * u_lightColor, lambert);
+
+  gl_FragColor = vec4(lit, 1.0);
 }
+
 `;
 
 // Use plain defaults (not { value: ... })
@@ -162,6 +175,13 @@ const IcoShaderMaterial = shaderMaterial(
     u_resolution: new THREE.Vector2(1, 1),
     u_audio: 0,
     u_frequency: 0,
+    u_peak: 0,
+
+    // NEW lighting uniforms
+    u_lightDir: new THREE.Vector3(0.5, 0.8, 0.95).normalize(), // view-space dir
+    u_lightColor: new THREE.Color(1, 1, 1),
+    u_ambient: 0.25, // slight ambient so the dark side is visible
+    u_shadowColor: new THREE.Color(0.9, 0.6, 0.9), // dark purple, for example
   },
   vert,
   frag
@@ -205,6 +225,7 @@ const IcoMesh: FC<IcoMeshProps> = ({
             u_resolution: new THREE.Vector2(1, 1),
             u_audio: 0,
             u_frequency: 0,
+            u_peak: 0,
           });
           mat.wireframe = true; // 👈 wireframe mode enabled here
           return mat;
@@ -337,28 +358,51 @@ const Icosahedron: FC<IcoProps> = ({
     const analyser = analyserRef.current!;
     const data = new Uint8Array(analyser.frequencyBinCount);
 
-    let env = 0; // 0..1 smoothed envelope
-    const ATTACK = 0.25; // rise speed
-    const DECAY = 0.06; // fall speed
+    // Main envelope (0..1)
+    let env = 0;
+    const ATTACK = 0.25;
+    const DECAY = 0.06;
+
+    // Fast vs slow envelope for transient detection
+    let envFast = 0;
+    let envSlow = 0;
+    const A_FAST = 0.5; // reacts quickly
+    const A_SLOW = 0.06; // lags behind
+
+    // Short-lived impulse that we’ll send to the shader
+    let peakImpulse = 0;
+    const PEAK_DECAY = 0.9; // 0.9..0.96 feels good
 
     const tick = () => {
       analyser.getByteFrequencyData(data);
 
-      // bass-weighted level (0..1). Use full average if you prefer.
+      // Bass-weighted level 0..1 (feel free to use full average if you prefer)
       const N = Math.min(12, data.length);
       const bass = N
         ? data.slice(0, N).reduce((a, v) => a + v, 0) / (N * 255)
         : 0;
 
+      // Main envelope (smooth, no pops)
       const target = Math.min(1, Math.max(0, bass));
       const rate = target > env ? ATTACK : DECAY;
       env += (target - env) * rate;
 
-      // Typed uniforms (no any)
+      // Transient detector: fast-minus-slow rise -> positive on attacks
+      envFast += (target - envFast) * A_FAST;
+      envSlow += (target - envSlow) * A_SLOW;
+      const transient = Math.max(0, envFast - envSlow); // 0..1
+
+      // Convert transient into a short impulse with decay (no “reset”)
+      peakImpulse = Math.max(peakImpulse * PEAK_DECAY, transient * 1.6); // scale gives punch, adjust to taste
+      peakImpulse = Math.min(1, peakImpulse);
+
+      // Send uniforms (typed)
       const u = materialRef.current?.uniforms as IcoUniforms | undefined;
       if (u) {
-        u.u_audio.value = env; // drive 0..1 for shader
-        u.u_frequency.value = env * 255; // optional: keep your 0..255 too
+        u.u_audio.value = env; // 0..1 envelope
+        u.u_frequency.value = env * 255; // optional mirror
+        // 👇 NEW
+        u.u_peak.value = peakImpulse;
       }
 
       rafRef.current = requestAnimationFrame(tick);

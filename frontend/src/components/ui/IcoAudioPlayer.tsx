@@ -4,18 +4,13 @@ import PlayAudioFile from "./PlayAudioFile"; // your button component
 
 type IcoAudioPlayerProps = {
   src: string;
-  //   haloSize?: number; // px
-  //   blur?: number; // px
-  className?: string; // controls the outer box size
-  /** optional: override sphere size without touching container */
-  icoRadius?: number; // default 20 (same as your Ico component)
+  className?: string;
+  icoRadius?: number;
 };
 
 const IcoAudioPlayer: FC<IcoAudioPlayerProps> = ({
   src,
-  //   haloSize = 160,
-  //   blur = 14,
-  className = "w-[480px] aspect-square", // <- give it size (responsive square)
+  className = "w-[480px] aspect-square",
   icoRadius = 20,
 }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -25,15 +20,15 @@ const IcoAudioPlayer: FC<IcoAudioPlayerProps> = ({
       <Icosahedron
         className='absolute inset-0'
         color='#98CCC6'
-        detail={50}
+        detail={90}
         radius={icoRadius}
         autoRotate
-        rotationSpeed={0.0}
+        rotationSpeed={0.01}
         background={null}
         audioRef={audioRef}
       />
 
-      <div className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-purple-400/20 via-cyan-500/20 to-primary/20'>
+      <div className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'>
         <PlayAudioFile
           src={src}
           audioRef={audioRef}

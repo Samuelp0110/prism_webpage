@@ -1,8 +1,12 @@
 import type { FC } from "react";
 
-const AboutCompany: FC = () => {
+type AboutCompanyProps = {
+  id: string;
+};
+
+const AboutCompany: FC<AboutCompanyProps> = ({ id }) => {
   return (
-    <section>
+    <section id={id}>
       <div>About Company Section</div>
     </section>
   );

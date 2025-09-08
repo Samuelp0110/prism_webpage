@@ -79,7 +79,7 @@ const PlayAudioFile: FC<PlayAudioFileProps> = ({
         onClick={toggle}
         aria-pressed={isPlaying}
         aria-label={isPlaying ? "Pause audio" : "Play audio"}
-        className='inline-flex items-center p-4 bg-gradient-to-r from-purple-400/10 via-cyan-500/10 to-primary/10 shadow-lg ring-1 ring-primary/5 backdrop-blur-lg rounded-full text-secondary'
+        className='inline-flex items-center rounded-full p-4 bg-gradient-to-tr from-purple-400/20 via-cyan-500/20 to-primary/20 shadow-lg ring-1 ring-primary/5 backdrop-blur-lg text-secondary'
       >
         {isPlaying ? (
           <Pause className='text-secondary' />

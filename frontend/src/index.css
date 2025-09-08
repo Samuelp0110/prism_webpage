@@ -34,3 +34,7 @@
 
   --font-roboto: "Roboto", sans-serif;
 }
+
+html {
+  @apply scroll-smooth;
+}

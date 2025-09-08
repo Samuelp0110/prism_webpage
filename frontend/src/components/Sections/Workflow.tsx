@@ -7,7 +7,7 @@ const Workflow: FC = () => {
   return (
     <section
       id='workflow-scope'
-      className='relative flex flex-col items-center justify-center isolate w-full bg-linear-to-r from-white to-primary/20 py-24'
+      className='relative flex flex-col items-center justify-center py-24 isolate w-full bg-gradient-to-l from-purple-400/10 via-cyan-500/10 to-primary/10 shadow-none [box-shadow:0_-12px_15px_-3px_rgba(0,0,0,0.1),0_12px_15px_-3px_rgba(0,0,0,0.1)]'
     >
       <div className='w-full flex flex-wrap items-center justify-evenly'>
         {/* your nodes */}

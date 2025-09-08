@@ -11,13 +11,12 @@ const Home: FC = () => {
     <main className='flex flex-col items-center justify-center bg-base'>
       <HeroSection />
       <CoreLinks />
-      <AboutCompany />
+      <Demo />
+      <AboutCompany id='about-company' />
       <div className='font-roboto font-bold py-10 text-secondary text-4xl'>
         Our Workflow
       </div>
       <Workflow />
-      <Demo />
-
       <PeopleIntro />
     </main>
   );

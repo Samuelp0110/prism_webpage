@@ -44,7 +44,7 @@ export default function Navbar() {
         {/* Logo that links to homepage */}
         <Link
           to='/'
-          className='text-2xl font-bold font-roboto '
+          className='text-2xl font-bold font-roboto scroll-smooth'
         >
           Hartibu Labs
         </Link>
@@ -53,12 +53,12 @@ export default function Navbar() {
         <div className='hidden md:flex items-center gap-10'>
           <div className='flex items-center gap-6'>
             {/* Use Link instead of anchor for SPA routing */}
-            <Link
-              to=''
+            <a
+              href='#about-company'
               className='text-xl font-roboto transition-colors duration-100 ease-in hover:text-primary'
             >
               About Us
-            </Link>
+            </a>
             <Link
               to=''
               className='text-xl font-roboto transition-colors duration-100 ease-in hover:text-primary'
